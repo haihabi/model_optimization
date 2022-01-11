@@ -24,7 +24,6 @@ if tf.__version__ < "2.6":
 else:
     from keras.engine.base_layer import Layer
 
-
 from tensorflow.python.training.tracking.data_structures import ListWrapper
 from tensorflow_model_optimization.python.core.quantization.keras.quantizers import Quantizer
 
@@ -32,6 +31,7 @@ from model_compression_toolkit.keras.quantizer.gradient_ptq.weight_quantizer imp
 from model_compression_toolkit.keras.quantizer.gradient_ptq.base_quantizer_gptq_config import BaseQuantizeConfig
 from model_compression_toolkit.keras.constants import KERNEL
 import numpy as np
+from model_compression_toolkit.common.defaultdict import DefaultDict
 
 
 class WeightQuantizeConfig(BaseQuantizeConfig):
@@ -44,7 +44,7 @@ class WeightQuantizeConfig(BaseQuantizeConfig):
                  threshold_values: np.ndarray,
                  weight_channel_axis: int,
                  num_bits: int,
-                 max_lsbs_change: int = 8):
+                 max_lsbs_change_map: dict = DefaultDict({}, lambda: 1)):
         """
         Initialize a TrainableQuantizer and set as the weights quantizer.
         Args:
@@ -52,6 +52,7 @@ class WeightQuantizeConfig(BaseQuantizeConfig):
             threshold_values: Thresholds to use for quantization.
             weight_channel_axis: Channel index to quantize when quantizing per-channel.
             num_bits: Number of bits to use for quantization.
+            max_lsbs_change_map: a mapping between number of bits to max lsb change.
         """
 
         self.weight_attrs = weight_attrs
@@ -60,7 +61,7 @@ class WeightQuantizeConfig(BaseQuantizeConfig):
                                                          threshold_values=threshold_values,
                                                          signed=True,
                                                          quantization_axis=weight_channel_axis,
-                                                         max_lsbs_change=max_lsbs_change)
+                                                         max_lsbs_change_map=max_lsbs_change_map)
 
     def get_weights_and_quantizers(self, layer: Layer) -> List[Tuple[Tensor, Quantizer]]:
         """

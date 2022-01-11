@@ -18,10 +18,24 @@ import os
 from typing import List, Callable
 
 import numpy as np
+import multiprocessing as mp
+from multiprocessing import Process
+
 from PIL import Image
 
 #:
 FILETYPES = ['jpeg', 'jpg', 'bmp', 'png']
+
+
+class FillQueue(object):
+    def __init__(self, q: mp.Queue, func):
+        self.func = func
+        self.q = q
+
+    def run(self):
+        while True:
+            if self.q.qsize() < 32:
+                self.q.put(self.func())
 
 
 class FolderImageLoader(object):
@@ -35,7 +49,9 @@ class FolderImageLoader(object):
                  folder: str,
                  preprocessing: List[Callable],
                  batch_size: int,
-                 file_types: List[str] = FILETYPES):
+                 file_types: List[str] = FILETYPES,
+                 is_multiprocessing: bool = False,
+                 num_workers: int = 4):
 
         """ Initialize a FolderImageLoader object.
 
@@ -45,6 +61,8 @@ class FolderImageLoader(object):
             preprocessing: List of functions to use when processing the images before retrieving them.
             batch_size: Number of images to retrieve each sample.
             file_types: Files types to scan in the folder. Default list is :data:`~model_compression_toolkit.common.data_loader.FILETYPES`
+            is_multiprocessing:  A boolean flag that enables multiprocessing of data loading.  Default is False.
+            num_workers: an integer that represents the number of parallel works that load data in case of multiprocessing.  Default is 4.
 
         Examples:
 
@@ -62,7 +80,8 @@ class FolderImageLoader(object):
             >>> image_data_loader = FolderImageLoader('path/to/images/directory', preprocessing=[], batch_size=10, file_types=['png'])
 
         """
-
+        self.is_multiprocessing = is_multiprocessing
+        self.num_workers = num_workers
         self.folder = folder
         self.image_list = []
         print(f"Starting Scanning Disk: {self.folder}")
@@ -77,22 +96,41 @@ class FolderImageLoader(object):
         self.preprocessing = preprocessing
         self.batch_size = batch_size
 
-    def _sample(self):
+        if self.is_multiprocessing:
+            self.ctx = mp.get_context('spawn')
+            self.q = self.ctx.Queue()
+
+            def _sample():
+                return self.read_image(self.batch_size, self.image_list, self.preprocessing, self.n_files)
+
+            self.fq = FillQueue(self.q, _sample)
+            self.p_list = []
+            print("Starting Multiprocessing")
+            for _ in range(num_workers):
+                p = Process(target=self.fq.run)
+                p.start()
+                self.p_list.append(p)
+
+    @staticmethod
+    def read_image(in_batch_size, in_image_list, in_preprocessing, in_n_files):
         """
         Read batch_size random images from the image_list the FolderImageLoader holds.
         Process them using the preprocessing list that was passed at initialization, and
         prepare it for retrieving.
         """
 
-        index = np.random.randint(0, self.n_files, self.batch_size)
+        index = np.random.randint(0, in_n_files, in_batch_size)
         image_list = []
         for i in index:
-            file = self.image_list[i]
+            file = in_image_list[i]
             img = np.uint8(np.array(Image.open(file).convert('RGB')))
-            for p in self.preprocessing:  # preprocess images
+            for p in in_preprocessing:  # preprocess images
                 img = p(img)
             image_list.append(img)
-        self.next_batch_data = np.stack(image_list, axis=0)
+        return np.stack(image_list, axis=0)
+
+    def _sample(self):
+        return self.read_image(self.batch_size, self.image_list, self.preprocessing, self.n_files)
 
     def sample(self):
         """
@@ -100,7 +138,13 @@ class FolderImageLoader(object):
         Returns: A sample of batch_size images from the folder the FolderImageLoader scanned.
 
         """
+        if self.is_multiprocessing:
+            return self.q.get()  # get current data
+        else:
+            return self._sample()  # read and return data
 
-        self._sample()
-        data = self.next_batch_data  # get current data
-        return data
+    def close(self):
+        if self.is_multiprocessing:
+            for p in self.p_list:
+                p.terminate()
+                p.join()

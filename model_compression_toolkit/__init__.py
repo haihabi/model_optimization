@@ -20,8 +20,9 @@ from model_compression_toolkit.common.mixed_precision import mixed_precision_qua
 from model_compression_toolkit.common.quantization.quantization_config import QuantizationConfig, \
     ThresholdSelectionMethod, QuantizationMethod, DEFAULTCONFIG
 from model_compression_toolkit.common.mixed_precision.kpi import KPI
-from model_compression_toolkit.common.mixed_precision.mixed_precision_quantization_config import MixedPrecisionQuantizationConfig
-from model_compression_toolkit.common.logger import set_log_folder
+from model_compression_toolkit.common.mixed_precision.mixed_precision_quantization_config import \
+    MixedPrecisionQuantizationConfig
+from model_compression_toolkit.common.logger import set_log_folder, disable_logger
 from model_compression_toolkit.common.data_loader import FolderImageLoader
 from model_compression_toolkit.common.framework_info import FrameworkInfo, ChannelAxis
 from model_compression_toolkit.common.defaultdict import DefaultDict
@@ -30,6 +31,5 @@ from model_compression_toolkit.common import network_editors as network_editor
 
 from model_compression_toolkit.keras.quantization_facade import keras_post_training_quantization, \
     keras_post_training_quantization_mixed_precision
-
 
 __version__ = "1.1.0"

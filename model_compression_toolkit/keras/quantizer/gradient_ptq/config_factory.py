@@ -23,11 +23,9 @@ from tensorflow_model_optimization.python.core.quantization.keras.default_8bit.d
 from model_compression_toolkit import common
 from model_compression_toolkit import keras
 from model_compression_toolkit.common.constants import THRESHOLD
-from model_compression_toolkit.keras.constants import DEPTHWISE_KERNEL, KERNEL
 from model_compression_toolkit.common.framework_info import FrameworkInfo
 
-
-MAX_LSBS_CHANGE = 8
+MAX_LSBS_CHANGE_MAP = {8: 4, 4: 2, 2: 1}
 
 
 def quantization_config_builder_gptq(n: common.BaseNode,
@@ -52,9 +50,8 @@ def quantization_config_builder_gptq(n: common.BaseNode,
                                                                             n.final_weights_quantization_cfg.weights_n_bits,
                                                                             n.activation_quantization_cfg.activation_quantization_params,
                                                                             activation_num_bits=n.activation_quantization_cfg.activation_n_bits,
-                                                                            max_lsbs_change=MAX_LSBS_CHANGE
+                                                                            max_lsbs_change_map=MAX_LSBS_CHANGE_MAP
                                                                             )
-
     elif n.is_activation_quantization_enabled() and not n.is_weights_quantization_enabled():
         qc = keras.quantizer.gradient_ptq.ActivationQuantizeConfig(n.activation_quantization_cfg.activation_quantization_params,
                                                                    num_bits=n.activation_quantization_cfg.activation_n_bits)
@@ -64,7 +61,7 @@ def quantization_config_builder_gptq(n: common.BaseNode,
                                                                n.final_weights_quantization_cfg.weights_quantization_params.get(THRESHOLD),
                                                                n.final_weights_quantization_cfg.weights_channels_axis,
                                                                n.final_weights_quantization_cfg.weights_n_bits,
-                                                               max_lsbs_change=MAX_LSBS_CHANGE)
+                                                               max_lsbs_change_map=MAX_LSBS_CHANGE_MAP)
 
     elif not n.is_weights_quantization_enabled() and not n.is_activation_quantization_enabled():
         qc = NoOpQuantizeConfig()

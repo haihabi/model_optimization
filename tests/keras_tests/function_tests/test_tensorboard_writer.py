@@ -33,9 +33,13 @@ class TestLogger(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        mct.common.Logger.set_log_file('/tmp/')
+        mct.set_log_folder("/tmp/")
         model = MobileNet()
         mct.keras_post_training_quantization(model, random_datagen, n_iter=1)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        mct.disable_logger()
 
     def test_tensorboard_log_dir(self):
         self.assertTrue(os.path.exists(os.path.join(mct.common.Logger.LOG_PATH, 'tensorboard_logs')))
