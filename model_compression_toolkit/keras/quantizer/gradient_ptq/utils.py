@@ -113,24 +113,37 @@ def symmetric_quantizer(input_tensor: tf.Tensor,
     return delta * tf.math.minimum(tf.math.maximum(tensor_q, min_int), max_int)
 
 
+def sum_of_sigmoids(v, n_steps, tau):
+    x = -n_steps
+    for i in range(n_steps):
+        delta = i + 0.5
+        x += tf.nn.sigmoid((v - delta) / tau) + tf.nn.sigmoid((v + delta) / tau)
+
+    return x
+
+
 def symmetric_constrained_quantizer(input_tensor: tf.Tensor,
                                     auxvar_tensor: tf.Variable,
                                     max_tensor: tf.Tensor,
                                     num_bits: int,
                                     signed: bool,
                                     power_of_two: bool,
-                                    max_lsbs_change: int = 1) -> tf.Tensor:
+                                    max_lsbs_change: int = 1,
+                                    enable_sum_of_sigmoids: bool = False,
+                                    tau=0) -> tf.Tensor:
     """
     Quantize a tensor symmetrically with maximum LSBs shift.
     Args:
+
         input_tensor: Tensor to quantize. values of this tensor are not changed during gptq.
         auxvar_tensor: Tensor that manifests the bit shift the weight due to gptq
-
         max_tensor: Tensor with max values to compute the threshold.
         num_bits: Num of bits to use.
         signed: Signedness of the quantization range.
         power_of_two: Whether the threshold should be constrained or not.
         max_lsbs_change: maximum number of LSBs that the auxvar is allowed to change
+        enable_sum_of_sigmoids:
+        tau:
 
     Returns:
         A quantized tensor.
@@ -139,7 +152,17 @@ def symmetric_constrained_quantizer(input_tensor: tf.Tensor,
     if power_of_two:
         max_tensor = power_of_two_max(max_tensor)
     delta = calculate_delta(max_tensor, num_bits, signed)
-    tensor_q = ste_round(tf.stop_gradient(tf.round(input_tensor / delta)) + ste_clip(auxvar_tensor, max_val=max_lsbs_change))
+    int_base = tf.stop_gradient(tf.round(input_tensor / delta))
+
+    if enable_sum_of_sigmoids:
+        if tau > 0:
+            auxvar_tensor = sum_of_sigmoids(auxvar_tensor, max_lsbs_change, tau)
+            tensor_q = int_base + ste_clip(auxvar_tensor, max_val=max_lsbs_change)
+        else:
+            auxvar_tensor = sum_of_sigmoids(auxvar_tensor, max_lsbs_change, 0.01)
+            tensor_q = ste_round(int_base + ste_clip(auxvar_tensor, max_val=max_lsbs_change))
+    else:
+        tensor_q = ste_round(int_base + ste_clip(auxvar_tensor, max_val=max_lsbs_change))
     min_int = -int(signed) * (2 ** (num_bits - int(signed)))
     max_int = (2 ** (num_bits - int(signed))) - 1
     return delta * ste_clip(tensor_q, max_val=max_int, min_val=min_int)

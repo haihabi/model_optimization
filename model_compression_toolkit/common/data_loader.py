@@ -23,7 +23,6 @@ from multiprocessing import Process
 
 from PIL import Image
 
-#:
 FILETYPES = ['jpeg', 'jpg', 'bmp', 'png']
 
 
@@ -51,7 +50,7 @@ class FolderImageLoader(object):
                  batch_size: int,
                  file_types: List[str] = FILETYPES,
                  is_multiprocessing: bool = False,
-                 num_workers: int = 4):
+                 num_workers: int = 8):
 
         """ Initialize a FolderImageLoader object.
 
@@ -148,3 +147,4 @@ class FolderImageLoader(object):
             for p in self.p_list:
                 p.terminate()
                 p.join()
+                p.close()

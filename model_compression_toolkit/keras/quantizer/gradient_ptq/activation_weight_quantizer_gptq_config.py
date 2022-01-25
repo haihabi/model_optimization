@@ -48,7 +48,8 @@ class ActivationAndWeightQuantizeConfig(BaseQuantizeConfig):
                  weight_num_bits: int,
                  activation_quantization_params: dict,
                  activation_num_bits: int = 8,
-                 max_lsbs_change_map: dict = DefaultDict({}, lambda: 1)):
+                 max_lsbs_change_map: dict = DefaultDict({}, lambda: 1),
+                 max_iteration=-1):
         """
         Initialize a TrainableQuantizer and set as the weights and activation quantizers.
         Args:
@@ -77,7 +78,8 @@ class ActivationAndWeightQuantizeConfig(BaseQuantizeConfig):
                                                          threshold_values=threshold_values,
                                                          signed=True,
                                                          quantization_axis=weight_channel_axis,
-                                                         max_lsbs_change_map=max_lsbs_change_map)
+                                                         max_lsbs_change_map=max_lsbs_change_map,
+                                                         max_iteration=max_iteration)
 
     def get_weights_and_quantizers(self, layer: Layer) -> List[Tuple[Tensor, Quantizer]]:
         """

@@ -27,7 +27,8 @@ class GradientPTQConfig:
                  loss: Callable = None,
                  log_function: Callable = None,
                  train_bias: bool = True,
-                 representative_data_gen: Callable = None):
+                 representative_data_gen: Callable = None,
+                 bit_width2max_change=None):
         """
         Initialize a GradientPTQConfig.
 
@@ -63,3 +64,4 @@ class GradientPTQConfig:
         self.log_function = log_function
         self.train_bias = train_bias
         self.representative_data_gen = representative_data_gen
+        self.bit_width2max_change = bit_width2max_change

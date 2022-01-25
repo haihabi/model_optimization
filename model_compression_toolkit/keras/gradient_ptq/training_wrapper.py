@@ -68,7 +68,8 @@ def gptq_training_wrapper(tg: Graph,
     fxp_model, gptq_user_info = model_builder(graph_bias,
                                               mode=ModelBuilderMode.GPTQ,
                                               append2output=compare_points,
-                                              fw_info=fw_info)
+                                              fw_info=fw_info,
+                                              gptq_config=gptq_config)
 
     trainable_weights = get_trainable_parameters(fxp_model,
                                                  fw_info,

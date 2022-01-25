@@ -21,4 +21,5 @@ from model_compression_toolkit.common.logger import Logger
 from model_compression_toolkit.common.quantization.quantization_config import QuantizationConfig, DEFAULTCONFIG
 from model_compression_toolkit.common.quantization.quantizers.quantizers_helpers import power_of_two_constraint
 from model_compression_toolkit.common.collectors.statistics_collector import StatsCollector, NoStatsCollector
+from model_compression_toolkit.common.gptq.gptq_config import GradientPTQConfig
 

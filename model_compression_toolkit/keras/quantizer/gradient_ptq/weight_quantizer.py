@@ -38,7 +38,9 @@ class TrainableWeightQuantizer(BaseTrainableQuantizer):
                  threshold_values: np.ndarray,
                  quantization_axis: int = -1,
                  power_of_two: bool = True,
-                 max_lsbs_change_map: dict = DefaultDict({}, lambda: 1)):
+                 max_lsbs_change_map: dict = DefaultDict({}, lambda: 1),
+                 sum_of_sigmoids: bool = False,
+                 max_iteration: int = 0):
         """
         Initialize a TrainableWeightQuantizer object with parameters to use
         for the quantization.
@@ -62,6 +64,20 @@ class TrainableWeightQuantizer(BaseTrainableQuantizer):
         self.power_of_two = power_of_two
         self.max_lsbs_change = max_lsbs_change_map[num_bits]
         self.quantizer_parameters = {}
+        self.max_iteration = max_iteration
+        self.sum_of_sigmoids = sum_of_sigmoids
+
+        def tau_function(i):
+            if self.sum_of_sigmoids:
+                if i > self.max_iteration * 0.75:
+                    return 0.0
+                else:
+                    x = np.pi * i / (2 * self.max_iteration * 0.75)
+                    return 0.1 * tf.math.cos(x)
+            else:
+                return 0
+
+        self.tau_function = tau_function
 
     def build(self,
               tensor_shape: TensorShape,
@@ -119,8 +135,9 @@ class TrainableWeightQuantizer(BaseTrainableQuantizer):
         """
 
         auxvar = weights['auxvar_tensor']
+        ar_iter = weights['ar_iter']
         ptq_threshold_tensor = weights['ptq_threshold_tensor']
-
+        ar_iter.assign_add(1.0)
         if self.per_axis:
             input_shape = inputs.shape
             n_axis = len(input_shape)
@@ -133,14 +150,18 @@ class TrainableWeightQuantizer(BaseTrainableQuantizer):
                                                        self.num_bits,
                                                        self.signed,
                                                        self.power_of_two,
-                                                       max_lsbs_change=self.max_lsbs_change)
+                                                       max_lsbs_change=self.max_lsbs_change,
+                                                       enable_sum_of_sigmoids=self.sum_of_sigmoids,
+                                                       tau=self.tau_function(ar_iter))
             return q_tensor
         else:
             return symmetric_constrained_quantizer(inputs, auxvar,
                                                    ptq_threshold_tensor,
                                                    self.num_bits,
                                                    self.signed,
-                                                   self.power_of_two)
+                                                   self.power_of_two,
+                                                   enable_sum_of_sigmoids=self.sum_of_sigmoids,
+                                                   tau=self.tau_function(ar_iter))
 
     def get_config(self) -> Dict[str, Any]:
         """

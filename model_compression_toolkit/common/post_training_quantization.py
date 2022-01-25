@@ -21,6 +21,7 @@ from typing import Callable, List, Tuple, Any
 from tqdm import tqdm
 
 from model_compression_toolkit import common
+from model_compression_toolkit.common import Logger
 from model_compression_toolkit.common.gptq.gptq_config import GradientPTQConfig
 from model_compression_toolkit.common.framework_implementation import FrameworkImplementation
 from model_compression_toolkit.common.mixed_precision.kpi import KPI
@@ -35,8 +36,6 @@ from model_compression_toolkit.common.network_editors.actions import EditRule
 from model_compression_toolkit.common.network_editors.edit_network import edit_network_graph
 from model_compression_toolkit.common.mixed_precision.mixed_precision_quantization_config import \
     MixedPrecisionQuantizationConfig
-from model_compression_toolkit.common.quantization.quantization_params_fn_selection import \
-    get_activation_quantization_params_fn
 from model_compression_toolkit.common.quantization.quantize_graph_weights import quantize_graph_weights
 from model_compression_toolkit.common.bias_correction.compute_bias_correction_of_graph import \
     compute_bias_correction_of_graph
@@ -113,13 +112,19 @@ def post_training_quantization(in_model: Any,
     ######################################
     if target_kpi is not None:
         assert isinstance(quant_config, MixedPrecisionQuantizationConfig)
-        bit_widths_config = search_bit_width(tg,
-                                             quant_config,
-                                             fw_info,
-                                             target_kpi,
-                                             partial(fw_impl.get_sensitivity_evaluation_fn,
-                                                     representative_data_gen=representative_data_gen,
-                                                     fw_info=fw_info))
+        if quant_config.configuration_overwrite is None:
+            bit_widths_config = search_bit_width(tg,
+                                                 quant_config,
+                                                 fw_info,
+                                                 target_kpi,
+                                                 partial(fw_impl.get_sensitivity_evaluation_fn,
+                                                         representative_data_gen=representative_data_gen,
+                                                         fw_info=fw_info))
+        else:
+            Logger.warning(
+                f'Mixed Precision has overwrite bitwidth configuration{quant_config.configuration_overwrite}')
+            bit_widths_config = quant_config.configuration_overwrite
+
     else:
         bit_widths_config = None
 
@@ -367,7 +372,6 @@ def _prepare_model_for_quantization(in_model: Any,
         node.prior_info = fw_impl.get_node_prior_info(node=node,
                                                       fw_info=fw_info)
 
-
     ######################################
     # Add quantization configurations
     ######################################
@@ -394,7 +398,6 @@ def _prepare_model_for_quantization(in_model: Any,
     if tb_w is not None:
         tb_w.add_graph(transformed_graph, 'after_analyzer_graph')
 
-
     ######################################
     # Statistic collection
     ######################################
@@ -404,7 +407,6 @@ def _prepare_model_for_quantization(in_model: Any,
 
     for _ in tqdm(range(n_iter)):
         mi.infer(representative_data_gen())
-
 
     ######################################
     # Edit network according to user specific settings
@@ -428,7 +430,6 @@ def _prepare_model_for_quantization(in_model: Any,
     transformed_graph = substitute(transformed_graph,
                                    fw_impl.get_substitutions_post_statistics_collection(quant_config))
 
-
     ######################################
     # Channel equalization
     ######################################
@@ -441,8 +442,8 @@ def _prepare_model_for_quantization(in_model: Any,
     ######################################
     if quant_config.shift_negative_activation_correction:
         transformed_graph = fw_impl.shift_negative_correction(transformed_graph,
-                                                                    quant_config,
-                                                                    fw_info)
+                                                              quant_config,
+                                                              fw_info)
         if tb_w is not None:
             tb_w.add_graph(transformed_graph, 'after_shift_negative_correction')
             tb_w.add_all_statistics(transformed_graph, 'after_shift_negative_correction')
@@ -465,4 +466,3 @@ def _prepare_model_for_quantization(in_model: Any,
         assert n.final_weights_quantization_cfg is None
 
     return tg_with_bias
-

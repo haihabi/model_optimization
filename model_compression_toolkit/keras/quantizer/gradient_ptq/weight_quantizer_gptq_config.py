@@ -44,7 +44,8 @@ class WeightQuantizeConfig(BaseQuantizeConfig):
                  threshold_values: np.ndarray,
                  weight_channel_axis: int,
                  num_bits: int,
-                 max_lsbs_change_map: dict = DefaultDict({}, lambda: 1)):
+                 max_lsbs_change_map: dict = DefaultDict({}, lambda: 1),
+                 max_iteration: int = -1):
         """
         Initialize a TrainableQuantizer and set as the weights quantizer.
         Args:
@@ -61,7 +62,8 @@ class WeightQuantizeConfig(BaseQuantizeConfig):
                                                          threshold_values=threshold_values,
                                                          signed=True,
                                                          quantization_axis=weight_channel_axis,
-                                                         max_lsbs_change_map=max_lsbs_change_map)
+                                                         max_lsbs_change_map=max_lsbs_change_map,
+                                                         max_iteration=max_iteration)
 
     def get_weights_and_quantizers(self, layer: Layer) -> List[Tuple[Tensor, Quantizer]]:
         """
