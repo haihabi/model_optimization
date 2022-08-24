@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Semiconductors Israel, Inc. All rights reserved.
+# Copyright 2022 Sony Semiconductor Israel, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,7 +90,8 @@ if importlib.util.find_spec("torch") is not None:
                                 core_config,
                                 target_platform_capabilities,
                                 fw_info,
-                                fw_impl)
+                                fw_impl,
+                                bops_kpi=False)
 
 
     def pytorch_kpi_data_experimental(in_model: Module,
@@ -143,7 +144,8 @@ if importlib.util.find_spec("torch") is not None:
                                 core_config,
                                 target_platform_capabilities,
                                 fw_info,
-                                fw_impl)
+                                fw_impl,
+                                bops_kpi=False)
 
 else:
     # If torch is not installed,

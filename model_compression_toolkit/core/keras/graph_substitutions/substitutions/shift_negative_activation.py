@@ -1,4 +1,4 @@
-# Copyright 2021 Sony Semiconductors Israel, Inc. All rights reserved.
+# Copyright 2021 Sony Semiconductor Israel, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ from typing import Tuple, Any
 
 import numpy as np
 import tensorflow as tf
-# As from Tensorflow 2.6, keras is a separate package and some classes should be imported differently.
-from keras.layers import TFOpLambda
+
+from tensorflow.python.keras.layers.core import TFOpLambda
 from tensorflow.keras.layers import Activation, Conv2D, Dense, DepthwiseConv2D, ZeroPadding2D, Reshape, \
     GlobalAveragePooling2D, Dropout, ReLU, PReLU, ELU
 

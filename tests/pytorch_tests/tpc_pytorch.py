@@ -1,4 +1,4 @@
-# Copyright 2022 Sony Semiconductors Israel, Inc. All rights reserved.
+# Copyright 2022 Sony Semiconductor Israel, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ from torch.nn.functional import relu, relu6, prelu, silu, hardtanh
 
 from model_compression_toolkit.core.common.target_platform.targetplatform2framework import LayerFilterParams
 from model_compression_toolkit.core.tpc_models.default_tpc.latest import generate_pytorch_tpc
-from model_compression_toolkit.core.pytorch.reader.graph_builders import DummyPlaceHolder
+from model_compression_toolkit.core.pytorch.reader.node_holders import DummyPlaceHolder
 
 tp = mct.target_platform
 
