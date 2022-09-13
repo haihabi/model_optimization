@@ -16,7 +16,7 @@
 
 import tensorflow as tf
 from tensorflow_model_optimization.python.core.quantization.keras.quantize_wrapper import QuantizeWrapper
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Any
 
 from model_compression_toolkit.core.keras.constants import USE_BIAS
 from model_compression_toolkit.gptq.keras.quantizer import WeightQuantizeConfig
@@ -82,6 +82,24 @@ def get_gumbel_probability(fxp_model: Model) -> List[tf.Tensor]:
                 layer.quantize_config, WeightQuantizeConfig):
             gumbel_prob_aux.append(layer.quantize_config.get_gumbel_probability())
     return gumbel_prob_aux
+
+
+def get_model_info(fxp_model: Model) -> Dict[str, Any]:
+    """
+    This function return the gumbel softmax probability of GumRounding
+    Args:
+        fxp_model: A model to be quantized with GumRounding
+
+    Returns: A list of tensors.
+
+    """
+    tau_list: Dict[str, tf.Tensor] = dict()
+    for layer in fxp_model.layers:
+        if isinstance(layer, QuantizeWrapper) and isinstance(
+                layer.quantize_config, WeightQuantizeConfig):
+            if layer.quantize_config.gptq_config.is_gumbel:
+                tau_list.update({layer.name: layer.quantize_config.weight_quantizer.tau})
+    return {"tau": tau_list}
 
 
 def get_weights_for_loss(fxp_model: Model) -> Tuple[List[list], List[list]]:

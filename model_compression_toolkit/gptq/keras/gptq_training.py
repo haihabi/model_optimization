@@ -31,7 +31,7 @@ from model_compression_toolkit.gptq.common.gptq_training import GPTQTrainer
 from model_compression_toolkit.gptq.common.gptq_config import GradientPTQConfig
 from model_compression_toolkit.core.common import Graph
 from model_compression_toolkit.gptq.keras.graph_info import get_trainable_parameters, get_weights_for_loss, \
-    get_gumbel_probability
+    get_gumbel_probability, get_model_info
 from model_compression_toolkit.core.common.framework_info import FrameworkInfo
 from model_compression_toolkit.core.common.framework_implementation import FrameworkImplementation
 import numpy as np
@@ -119,13 +119,14 @@ class KerasGPTQTrainer(GPTQTrainer):
                                      fw_info=self.fw_info,
                                      return_float_outputs=True).build_model()
 
-    def compute_gradients(self, in_y_float: List[tf.Tensor], input_data: List[np.ndarray],
+    def compute_gradients(self, iteration, in_y_float: List[tf.Tensor], input_data: List[np.ndarray],
                           in_optimizer_with_param: List,
                           training=True) -> Tuple[tf.Tensor, List[tf.Tensor]]:
         """
         Get outputs from both teacher and student networks. Compute the observed error,
         and use it to compute the gradients and applying them to the student weights.
         Args:
+            iteration:
             in_y_float: A list of reference tensor from the floating point network.
             input_data: A list of Input tensors to pass through the networks.
             in_optimizer_with_param: A list of optimizer classes to update with the corresponding parameters.
@@ -210,19 +211,20 @@ class KerasGPTQTrainer(GPTQTrainer):
         Returns: None
 
         """
-        for _ in tqdm(range(int(n_iteration))):
+        for i in tqdm(range(int(n_iteration))):
             data = data_function()
             input_data = [d * self.input_scale for d in data]
             y_float = self.float_model(input_data)  # running float model
-            loss_value_step, grads = in_compute_gradients(y_float, input_data, in_optimizer_with_param,
+            loss_value_step, grads = in_compute_gradients(i, y_float, input_data, in_optimizer_with_param,
                                                           training=is_training)
+            model_info_dict = get_model_info(self.fxp_model)
             # Run one step of gradient descent by updating
             # the value of the variables to minimize the loss.
             for i, (o, p) in enumerate(in_optimizer_with_param):
                 o.apply_gradients(zip(grads[i], p))
             if self.gptq_config.log_function is not None:
                 self.gptq_config.log_function(loss_value_step, grads[0], in_optimizer_with_param[0][-1],
-                                              self.compare_points)
+                                              self.compare_points, model_info_dict)
             self.loss_list.append(loss_value_step.numpy())
             common.Logger.debug(f'last loss value: {self.loss_list[-1]}')
 
@@ -259,4 +261,3 @@ class KerasGPTQTrainer(GPTQTrainer):
                         node.set_weights_by_keys(BIAS, new_bias)
 
         return graph
-
